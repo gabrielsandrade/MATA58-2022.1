@@ -22,7 +22,13 @@ char remove_newline(char *str)
 int run(char *command[], char *params[])
 {
     int pid = fork();
-    int *status;
+    int child_pid;
+    if (pid > 0)
+    {
+        child_pid = pid;
+        printf("child pid : %d\n", pid);
+    }
+    int status;
 
     switch (pid)
     {
@@ -36,10 +42,40 @@ int run(char *command[], char *params[])
             perror("execvp error");
             exit(EXIT_FAILURE);
         }
-        printf("Processo terminado com status : %d\n", *status);
         break;
     default:
-        waitpid(pid, status, WUNTRACED);
+        waitpid(pid, &status, WUNTRACED);
+        printf("Processo %i terminado com status : %i\n", child_pid, status);
+        break;
+    }
+    return 0;
+}
+
+int start(char *command[], char *params[])
+{
+    int pid = fork();
+    int child_pid;
+    if (pid > 0)
+    {
+        child_pid = pid;
+        printf("child pid : %d\n", pid);
+    }
+    int status;
+
+    switch (pid)
+    {
+    case -1:
+        perror("fork error");
+        break;
+
+    case 0:
+        if (execvp(command[0], params) == -1)
+        {
+            perror("execvp error");
+            exit(EXIT_FAILURE);
+        }
+        break;
+    default:
         break;
     }
     return 0;
@@ -52,7 +88,7 @@ int main()
     {
         char palavras[4096];
         int param_index = 0;
-        long status;
+        int status;
 
         char *token;
         char *command = NULL;
@@ -75,9 +111,11 @@ int main()
             {
             case 0:
                 operation = token;
+                param_index = 1;
                 break;
             case 1:
                 command = token;
+                param_index = 2;
                 break;
 
             default:
@@ -87,22 +125,25 @@ int main()
             }
 
             token = strtok(NULL, " ");
-            param_index += 1;
+        }
+
+        if (strcmp(operation, "\n") == 0)
+        {
+            free(params);
+            continue;
         }
 
         *operation = remove_newline(operation);
         *command = remove_newline(command);
         *params = remove_newline(params);
-        printf("operation : %s\n", operation);
-        printf("command : %s\n", command);
-        printf("params : %s\n", params);
 
         if (strcmp(operation, "start") == 0)
         {
-            printf("start\n");
+            start(&command, &params);
         }
         else if (strcmp(operation, "exit") == 0 || strcmp(operation, "quit") == 0)
         {
+            free(params);
             exit(0);
         }
         else if (strcmp(operation, "run") == 0)
@@ -116,6 +157,15 @@ int main()
         else if (strcmp(operation, "continue") == 0)
         {
             printf("continue\n");
+        }
+        else if (strcmp(operation, "kill") == 0)
+        {
+            printf("%d\n", getpid());
+            printf("kill\n");
+            if (kill(atoi(command), SIGKILL) < 0)
+                printf("Erro ao finalizar processo %i\n", atoi(command));
+            else
+                printf("Processo %i finalizado com status %i\n", atoi(command), status);
         }
         else
         {

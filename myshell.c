@@ -3,6 +3,7 @@
 #include <string.h>
 #include <unistd.h>
 #include <errno.h>
+#include <sys/wait.h>
 
 /*
  * myshell.c
@@ -18,23 +19,32 @@ char remove_newline(char *str)
     return *str;
 }
 
-void run(char *command[])
+int run(char *command[], char *params[])
 {
-    printf("Executing command: %s", command[0]);
-    int return_value = system(command[0]);
+    int pid = fork();
+    int *status;
 
-    if (return_value == 0)
+    switch (pid)
     {
-        printf("Processo X finalizou normalmente com status %i\n\n", return_value);
-    }
-    else
-        printf("Processo de numero X falhou com status %d\n\n", return_value);
+    case -1:
+        perror("fork error");
+        break;
 
-    // int comparisson = strcmp(command, "run\n");
+    case 0:
+        if (execvp(command[0], params) == -1)
+        {
+            perror("execvp error");
+            exit(EXIT_FAILURE);
+        }
+        printf("Processo terminado com status : %d\n", *status);
+        break;
+    default:
+        waitpid(pid, status, WUNTRACED);
+        break;
+    }
+    return 0;
 }
-/**
- * readline - read a line of input from stdin
- */
+
 int main()
 {
 
@@ -42,10 +52,11 @@ int main()
     {
         char palavras[4096];
         int param_index = 0;
+        long status;
 
         char *token;
         char *command = NULL;
-        char *params;
+        char *params = NULL;
         char *operation;
         printf("myshell>");
         fgets(palavras, 4096, stdin);
@@ -55,21 +66,36 @@ int main()
         operation = token;
 
         int argvLen = strlen(palavras);
-        command = malloc(argvLen + 1);
+        params = malloc(argvLen + 1);
 
         while (token != NULL)
         {
-            if (param_index != 0)
+            switch (param_index)
+
             {
-                strcat(command, token);
-                strcat(command, " ");
+            case 0:
+                operation = token;
+                break;
+            case 1:
+                command = token;
+                break;
+
+            default:
+                strcat(params, token);
+                strcat(params, " ");
+                break;
             }
+
             token = strtok(NULL, " ");
-            param_index = 1;
+            param_index += 1;
         }
 
         *operation = remove_newline(operation);
+        *command = remove_newline(command);
+        *params = remove_newline(params);
         printf("operation : %s\n", operation);
+        printf("command : %s\n", command);
+        printf("params : %s\n", params);
 
         if (strcmp(operation, "start") == 0)
         {
@@ -81,7 +107,7 @@ int main()
         }
         else if (strcmp(operation, "run") == 0)
         {
-            run(&command);
+            run(&command, &params);
         }
         else if (strcmp(operation, "stop") == 0)
         {
@@ -95,6 +121,7 @@ int main()
         {
             printf("Invalid operation\n");
         }
+        free(params);
     }
     return 0;
 }

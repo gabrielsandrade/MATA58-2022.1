@@ -134,7 +134,10 @@ int main()
         }
 
         *operation = remove_newline(operation);
-        *command = remove_newline(command);
+        if (command != NULL)
+        {
+            *command = remove_newline(command);
+        }
         *params = remove_newline(params);
 
         if (strcmp(operation, "start") == 0)

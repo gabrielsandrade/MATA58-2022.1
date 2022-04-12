@@ -27,7 +27,7 @@ int start(char *command[], char *params[], bool wait)
     if (pid > 0)
     {
         child_pid = pid;
-        printf("child pid : %d\n", pid);
+        printf("Pid do novo processo inicializado : %d\n", pid);
     }
     int status;
 
@@ -48,7 +48,7 @@ int start(char *command[], char *params[], bool wait)
         if (wait)
         {
             waitpid(pid, &status, WUNTRACED);
-            printf("Processo %i terminado com status : %i\n", child_pid, status);
+            printf("Processo %i finalizou normalmente com status : %i\n", child_pid, status);
         }
 
         break;
@@ -130,24 +130,37 @@ int main()
         }
         else if (strcmp(operation, "stop") == 0)
         {
-            printf("stop\n");
+            if (kill(atoi(command), SIGSTOP) == -1)
+            {
+                printf("Processo não encontrado\n");
+            }
+            else
+            {
+                printf("Processo %i parado\n", atoi(command));
+            }
         }
         else if (strcmp(operation, "continue") == 0)
         {
-            printf("continue\n");
+            if (kill(atoi(command), SIGCONT) == -1)
+            {
+                printf("Processo não encontrado\n");
+            }
+            else
+            {
+                printf("Processo %i continuado\n", atoi(command));
+            }
         }
         else if (strcmp(operation, "kill") == 0)
         {
-            printf("%d\n", getpid());
-            printf("kill\n");
             if (kill(atoi(command), SIGKILL) < 0)
                 printf("Erro ao finalizar processo %i\n", atoi(command));
             else
                 printf("Processo %i finalizado com status %i\n", atoi(command), status);
         }
+
         else
         {
-            printf("Invalid operation\n");
+            printf("Comando inválido\n");
         }
         free(params);
     }

@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdbool.h>
 #include <unistd.h>
 #include <errno.h>
 #include <sys/wait.h>
@@ -19,7 +20,7 @@ char remove_newline(char *str)
     return *str;
 }
 
-int run(char *command[], char *params[])
+int start(char *command[], char *params[], bool wait)
 {
     int pid = fork();
     int child_pid;
@@ -44,38 +45,12 @@ int run(char *command[], char *params[])
         }
         break;
     default:
-        waitpid(pid, &status, WUNTRACED);
-        printf("Processo %i terminado com status : %i\n", child_pid, status);
-        break;
-    }
-    return 0;
-}
-
-int start(char *command[], char *params[])
-{
-    int pid = fork();
-    int child_pid;
-    if (pid > 0)
-    {
-        child_pid = pid;
-        printf("child pid : %d\n", pid);
-    }
-    int status;
-
-    switch (pid)
-    {
-    case -1:
-        perror("fork error");
-        break;
-
-    case 0:
-        if (execvp(command[0], params) == -1)
+        if (wait)
         {
-            perror("execvp error");
-            exit(EXIT_FAILURE);
+            waitpid(pid, &status, WUNTRACED);
+            printf("Processo %i terminado com status : %i\n", child_pid, status);
         }
-        break;
-    default:
+
         break;
     }
     return 0;
@@ -142,7 +117,7 @@ int main()
 
         if (strcmp(operation, "start") == 0)
         {
-            start(&command, &params);
+            start(&command, &params, false);
         }
         else if (strcmp(operation, "exit") == 0 || strcmp(operation, "quit") == 0)
         {
@@ -151,7 +126,7 @@ int main()
         }
         else if (strcmp(operation, "run") == 0)
         {
-            run(&command, &params);
+            start(&command, &params, true);
         }
         else if (strcmp(operation, "stop") == 0)
         {

@@ -133,7 +133,9 @@ int main()
             if (kill(atoi(command), SIGSTOP) == -1)
             {
                 printf("Processo não encontrado\n");
-            }else {
+            }
+            else
+            {
                 printf("Processo %i parado\n", atoi(command));
             }
         }
@@ -142,7 +144,9 @@ int main()
             if (kill(atoi(command), SIGCONT) == -1)
             {
                 printf("Processo não encontrado\n");
-            }else {
+            }
+            else
+            {
                 printf("Processo %i continuado\n", atoi(command));
             }
         }
@@ -153,6 +157,7 @@ int main()
             else
                 printf("Processo %i finalizado com status %i\n", atoi(command), status);
         }
+
         else
         {
             printf("Comando inválido\n");

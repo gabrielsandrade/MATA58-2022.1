@@ -20,7 +20,7 @@ char remove_newline(char *str)
     return *str;
 }
 
-int start(char *command[], char *params[], bool wait)
+int start(char *params[], bool wait)
 {
     int pid = fork();
     int child_pid;
@@ -38,7 +38,7 @@ int start(char *command[], char *params[], bool wait)
         break;
 
     case 0:
-        if (execvp(command[0], params) == -1)
+        if (execvp(params[0], params) == -1)
         {
             perror("execvp error");
             exit(EXIT_FAILURE);
@@ -48,7 +48,7 @@ int start(char *command[], char *params[], bool wait)
         if (wait)
         {
             waitpid(pid, &status, WUNTRACED);
-            printf("Processo %i finalizou normalmente com status : %i\n", child_pid, status);
+            printf("Processo %i finalizou com status : %i\n", child_pid, status);
         }
 
         break;
@@ -66,18 +66,15 @@ int main()
         int status;
 
         char *token;
-        char *command = NULL;
-        char *params = NULL;
+        char *argv[4096];
         char *operation;
         printf("myshell>");
         fgets(palavras, 4096, stdin);
 
-        /* get the first token */
         token = strtok(palavras, " ");
         operation = token;
 
         int argvLen = strlen(palavras);
-        params = malloc(argvLen + 1);
 
         while (token != NULL)
         {
@@ -86,83 +83,92 @@ int main()
             {
             case 0:
                 operation = token;
-                param_index = 1;
-                break;
-            case 1:
-                command = token;
-                param_index = 2;
                 break;
 
             default:
-                strcat(params, token);
-                strcat(params, " ");
+                *token = remove_newline(token);
+                argv[param_index - 1] = token;
                 break;
             }
-
+            param_index++;
             token = strtok(NULL, " ");
         }
 
+        if (argv[param_index] == "")
+            argv[param_index] = '\0';
+        argv[param_index] = NULL;
+        int i = 0;
+
         if (strcmp(operation, "\n") == 0)
         {
-            free(params);
             continue;
         }
 
         *operation = remove_newline(operation);
-        if (command != NULL)
-        {
-            *command = remove_newline(command);
-        }
-        *params = remove_newline(params);
 
         if (strcmp(operation, "start") == 0)
         {
-            start(&command, &params, false);
+            start(argv, false);
         }
         else if (strcmp(operation, "exit") == 0 || strcmp(operation, "quit") == 0)
         {
-            free(params);
             exit(0);
         }
         else if (strcmp(operation, "run") == 0)
         {
-            start(&command, &params, true);
+            start(argv, true);
+        }
+        else if (strcmp(operation, "wait") == 0)
+        {
+            int status;
+            int response = wait(&status);
+            if (response == -1)
+            {
+                printf("nao ha processos restantes\n");
+            }
+            if (response >= 0)
+            {
+                if (WIFEXITED(status))
+                {
+                    const int es = WEXITSTATUS(status);
+                    printf("Processo %i foi finalizado com status %d\n", response, status);
+                }
+            }
         }
         else if (strcmp(operation, "stop") == 0)
         {
-            if (kill(atoi(command), SIGSTOP) == -1)
+            if (kill(atoi(argv[0]), SIGSTOP) == -1)
             {
                 printf("Processo não encontrado\n");
             }
             else
             {
-                printf("Processo %i parado\n", atoi(command));
+                printf("Processo %i parado\n", atoi(argv[0]));
             }
         }
         else if (strcmp(operation, "continue") == 0)
         {
-            if (kill(atoi(command), SIGCONT) == -1)
+            if (kill(atoi(argv[0]), SIGCONT) == -1)
             {
                 printf("Processo não encontrado\n");
             }
             else
             {
-                printf("Processo %i continuado\n", atoi(command));
+                printf("Processo %i continuado\n", atoi(argv[0]));
             }
         }
         else if (strcmp(operation, "kill") == 0)
         {
-            if (kill(atoi(command), SIGKILL) < 0)
-                printf("Erro ao finalizar processo %i\n", atoi(command));
+            if (kill(atoi(argv[0]), SIGKILL) < 0)
+                printf("Erro ao finalizar processo %i\n", atoi(argv[0]));
             else
-                printf("Processo %i finalizado com status %i\n", atoi(command), status);
+                printf("Processo %i finalizado com status %i\n", atoi(argv[0]), status);
         }
 
         else
         {
             printf("Comando inválido\n");
         }
-        free(params);
     }
     return 0;
 }
